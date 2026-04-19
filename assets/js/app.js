@@ -216,9 +216,6 @@
     return (value || 'NA').toString().replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
   }
 
-  /**
-   * دالة التصدير مع تحجيم تلقائي للأعمدة (AutoFit)
-   */
   function exportExcel(data, fileName, status) {
     const statusText = (status || '').toString().toLowerCase();
     const isPendingOnly = statusText.includes('pending') && !statusText.includes('done');
@@ -227,6 +224,13 @@
       const next = { ...row };
       config.alwaysDeleteColumns.forEach((column) => delete next[column]);
       if (isPendingOnly) config.pendingOnlyDeleteColumns.forEach((column) => delete next[column]);
+
+      // تنظيف المسافات: استبدال مسافتين أو أكثر بمسافة واحدة + Trim
+      Object.keys(next).forEach(key => {
+        if (typeof next[key] === 'string') {
+          next[key] = next[key].replace(/\s\s+/g, ' ').trim();
+        }
+      });
 
       if (next.CreatedOn) {
         const created = new Date(next.CreatedOn);
@@ -239,19 +243,18 @@
 
     const ws = XLSX.utils.json_to_sheet(processed);
 
-    // منطق التحجيم التلقائي للأعمدة (Auto-Fit)
+    // التحجيم التلقائي للأعمدة (AutoFit)
     if (processed.length > 0) {
       const objectKeys = Object.keys(processed[0]);
       const colWidths = objectKeys.map(key => {
-        // حساب الطول الأقصى للرؤوس والبيانات
         const headerLen = key.toString().length;
         const maxDataLen = processed.reduce((max, row) => {
-          const cellValue = row[key] ? row[key].toString().length : 0;
-          return Math.max(max, cellValue);
+          const val = row[key] ? row[key].toString().length : 0;
+          return Math.max(max, val);
         }, headerLen);
         
-        // استخدام معامل 1.2 لمراعاة عرض الحروف العربية وترك مساحة صغيرة (Buffer)
-        return { wch: (maxDataLen * 1.2) + 2 };
+        // معامل 1.25 يعطي أداءً جيداً مع الحروف العربية واللاتينية المختلطة
+        return { wch: (maxDataLen * 1.25) + 2 };
       });
       ws['!cols'] = colWidths;
     }

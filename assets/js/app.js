@@ -225,7 +225,7 @@
       config.alwaysDeleteColumns.forEach((column) => delete next[column]);
       if (isPendingOnly) config.pendingOnlyDeleteColumns.forEach((column) => delete next[column]);
 
-      // تنظيف المسافات: استبدال مسافتين أو أكثر بمسافة واحدة + Trim
+      // 1. تنظيف المسافات الزائدة (مسافتين أو أكثر تصبح مسافة واحدة)
       Object.keys(next).forEach(key => {
         if (typeof next[key] === 'string') {
           next[key] = next[key].replace(/\s\s+/g, ' ').trim();
@@ -243,7 +243,7 @@
 
     const ws = XLSX.utils.json_to_sheet(processed);
 
-    // التحجيم التلقائي للأعمدة (AutoFit)
+    // 2. تحجيم تلقائي دقيق (بدون زيادة مبالغ فيها)
     if (processed.length > 0) {
       const objectKeys = Object.keys(processed[0]);
       const colWidths = objectKeys.map(key => {
@@ -253,8 +253,8 @@
           return Math.max(max, val);
         }, headerLen);
         
-        // معامل 1.25 يعطي أداءً جيداً مع الحروف العربية واللاتينية المختلطة
-        return { wch: (maxDataLen * 1.25) + 2 };
+        // العرض المناسب تماماً مع إضافة هامش بسيط (1) لمنع التصاق النص
+        return { wch: maxDataLen + 1 };
       });
       ws['!cols'] = colWidths;
     }

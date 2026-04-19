@@ -12,10 +12,10 @@ body {
 .checkbox-item input[type='checkbox'] { width: 1.1rem; height: 1.1rem; margin-left: 0.75rem; flex-shrink: 0; }
 .group-btn { transition: all 0.2s; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.825rem; font-weight: 500; white-space: nowrap; cursor: pointer; background: white; }
 .group-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); }
-.table-container { max-height: 500px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 0.75rem; }
-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-th { position: sticky; top: 0; background: #f8fafc; z-index: 10; padding: 12px; border-bottom: 2px solid #e2e8f0; text-align: right; }
-td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+.table-container { max-height: 500px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 0.75rem; line-height: 1.35; }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: auto; }
+th { position: sticky; top: 0; background: #f8fafc; z-index: 10; padding: 12px; border-bottom: 2px solid #e2e8f0; text-align: right; white-space: normal; vertical-align: top; }
+td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: normal; word-break: break-word; overflow-wrap: anywhere; vertical-align: top; }
 tr:hover { background-color: #f1f5f9; }
 .pagination-btn { padding: 0.5rem 1rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; font-size: 0.875rem; transition: all 0.2s; }
 .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }

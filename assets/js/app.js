@@ -201,7 +201,7 @@
     const pageData = state.filteredData.slice(start, end);
 
     dom.previewBody.innerHTML = pageData
-      .map((row) => `<tr>${visibleKeys.map((key) => `<td>${row[key] || ''}</td>`).join('')}</tr>`)
+      .map((row) => `<tr>${visibleKeys.map((key) => `<td>${String(row[key] ?? '')}</td>`).join('')}</tr>`)
       .join('');
   }
 

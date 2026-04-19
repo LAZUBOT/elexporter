@@ -216,6 +216,9 @@
     return (value || 'NA').toString().replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
   }
 
+  /**
+   * دالة التصدير مع تحجيم تلقائي للأعمدة (AutoFit)
+   */
   function exportExcel(data, fileName, status) {
     const statusText = (status || '').toString().toLowerCase();
     const isPendingOnly = statusText.includes('pending') && !statusText.includes('done');
@@ -235,6 +238,24 @@
     });
 
     const ws = XLSX.utils.json_to_sheet(processed);
+
+    // منطق التحجيم التلقائي للأعمدة (Auto-Fit)
+    if (processed.length > 0) {
+      const objectKeys = Object.keys(processed[0]);
+      const colWidths = objectKeys.map(key => {
+        // حساب الطول الأقصى للرؤوس والبيانات
+        const headerLen = key.toString().length;
+        const maxDataLen = processed.reduce((max, row) => {
+          const cellValue = row[key] ? row[key].toString().length : 0;
+          return Math.max(max, cellValue);
+        }, headerLen);
+        
+        // استخدام معامل 1.2 لمراعاة عرض الحروف العربية وترك مساحة صغيرة (Buffer)
+        return { wch: (maxDataLen * 1.2) + 2 };
+      });
+      ws['!cols'] = colWidths;
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, config.defaultSheetName);
     XLSX.writeFile(wb, `${fileName}.xlsx`);

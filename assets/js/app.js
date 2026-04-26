@@ -21,15 +21,7 @@
     smartGroupContainer: document.getElementById('smartGroupContainer'),
     smartGroups: document.getElementById('smartGroups'),
     zoneNameInput: document.getElementById('zoneNameFilter'),
-    convertBtn: document.getElementById('convertBtn'),
-    previewBody: document.getElementById('previewBody'),
-    previewHead: document.getElementById('previewHead'),
-    countNumber: document.getElementById('countNumber'),
-    statusMsg: document.getElementById('statusMsg'),
-    govCount: document.getElementById('govCount'),
-    contractorCount: document.getElementById('contractorCount'),
-    statusCount: document.getElementById('statusCount'),
-    totalPagesNum: document.getElementById('totalPagesNum'),
+      smartSelectionNote: document.getElementById('smartSelectionNote'),
     currentPageNum: document.getElementById('currentPageNum'),
     prevPage: document.getElementById('prevPage'),
     nextPage: document.getElementById('nextPage')
@@ -70,6 +62,7 @@
           btn.classList.toggle('active', btn.dataset.filter === state.currentSmartFilter);
         });
         updateGlobalFilters();
+        updateSmartNote();
       });
     });
   }
@@ -149,6 +142,8 @@
       });
     }
 
+    updateSmartNote();
+
     const subset = filterBySelections(state.rawData, selectedGovs, [], [], '');
     const contractors = [...new Set(subset.map((row) => (row['Zone Contractor'] || '').toString()).filter(Boolean))].sort();
     buildCheckboxes(dom.contractorContainer, 'contractor', contractors, updateStatusOptions);
@@ -177,6 +172,7 @@
     state.filteredData = filterBySelections(state.rawData, selectedGovs, selectedCons, selectedStats, zoneQuery);
     state.currentPage = 1;
     renderPreview();
+    updateSmartNote();
   }
 
   function renderPreview() {
@@ -220,6 +216,17 @@
     if (state.currentSmartFilter === 'all') return '';
     const button = config.smartButtons.find((item) => item.key === state.currentSmartFilter);
     return button ? button.label : state.currentSmartFilter;
+  }
+
+  function updateSmartNote() {
+    const selectedGovs = getCheckedValues('gov');
+    if (selectedGovs.length === 1 && selectedGovs[0] === 'FTK' && state.currentSmartFilter !== 'all') {
+      dom.smartSelectionNote.innerText = `سيُضاف إلى اسم الملف: المنطقة الذكية "${getSelectedSmartLabel()}".`;
+      dom.smartSelectionNote.classList.remove('hidden');
+    } else {
+      dom.smartSelectionNote.innerText = '';
+      dom.smartSelectionNote.classList.add('hidden');
+    }
   }
 
   function exportExcel(data, fileName, status) {

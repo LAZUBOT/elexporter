@@ -36,26 +36,43 @@
   }
 
   function buildCheckboxes(container, name, values, onChange) {
-    container.innerHTML = values
-      .map((value) => `
-        <label class="checkbox-item">
-          <input type="checkbox" name="${name}" value="${value}">
-          <span class="mr-2 text-sm">${value}</span>
-        </label>
-      `)
-      .join('');
+    container.innerHTML = '';
+    const fragment = document.createDocumentFragment();
 
-    container.querySelectorAll(`input[name="${name}"]`).forEach((checkbox) => {
-      checkbox.addEventListener('change', onChange);
+    values.forEach((value) => {
+      const label = document.createElement('label');
+      label.className = 'checkbox-item';
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.name = name;
+      input.value = value;
+
+      const span = document.createElement('span');
+      span.className = 'mr-2 text-sm';
+      span.textContent = value;
+
+      label.appendChild(input);
+      label.appendChild(span);
+      fragment.appendChild(label);
+
+      input.addEventListener('change', onChange);
     });
+
+    container.appendChild(fragment);
   }
 
   function initSmartButtons() {
-    dom.smartGroups.innerHTML = config.smartButtons
-      .map(({ key, label }) => `<button type="button" class="group-btn ${key === 'all' ? 'active' : ''}" data-filter="${key}">${label}</button>`)
-      .join('');
+    dom.smartGroups.innerHTML = '';
+    const fragment = document.createDocumentFragment();
 
-    dom.smartGroups.querySelectorAll('button[data-filter]').forEach((button) => {
+    config.smartButtons.forEach(({ key, label }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `group-btn ${key === 'all' ? 'active' : ''}`;
+      button.dataset.filter = key;
+      button.textContent = label;
+
       button.addEventListener('click', () => {
         state.currentSmartFilter = button.dataset.filter;
         dom.smartGroups.querySelectorAll('.group-btn').forEach((btn) => {
@@ -64,7 +81,11 @@
         updateGlobalFilters();
         updateSmartNote();
       });
+
+      fragment.appendChild(button);
     });
+
+    dom.smartGroups.appendChild(fragment);
   }
 
   function parseCsv(file) {
@@ -89,19 +110,30 @@
       .sort();
 
     const displayValues = availableGovs.map((code) => `${config.govMap[code]} (${code})`);
-    dom.govContainer.innerHTML = availableGovs
-      .map((code, i) => `
-        <label class="checkbox-item">
-          <input type="checkbox" name="gov" value="${code}">
-          <span class="mr-2 text-sm">${displayValues[i]}</span>
-        </label>
-      `)
-      .join('');
+    dom.govContainer.innerHTML = '';
+    const fragment = document.createDocumentFragment();
 
-    dom.govContainer.querySelectorAll('input[name="gov"]').forEach((checkbox) => {
-      checkbox.addEventListener('change', updateContractorOptions);
+    availableGovs.forEach((code, i) => {
+      const label = document.createElement('label');
+      label.className = 'checkbox-item';
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.name = 'gov';
+      input.value = code;
+
+      const span = document.createElement('span');
+      span.className = 'mr-2 text-sm';
+      span.textContent = displayValues[i];
+
+      label.appendChild(input);
+      label.appendChild(span);
+      fragment.appendChild(label);
+
+      input.addEventListener('change', updateContractorOptions);
     });
 
+    dom.govContainer.appendChild(fragment);
     updateContractorOptions();
   }
 
@@ -183,22 +215,42 @@
     dom.prevPage.disabled = state.currentPage === 1;
     dom.nextPage.disabled = state.currentPage === totalPages;
 
+    dom.previewHead.innerHTML = '';
+    dom.previewBody.innerHTML = '';
+
     if (!state.filteredData.length) {
-      dom.previewHead.innerHTML = '';
-      dom.previewBody.innerHTML = '<tr><td colspan="100%" class="text-center py-12 text-slate-400">لا توجد بيانات تطابق الفلاتر</td></tr>';
+      const emptyRow = document.createElement('tr');
+      const emptyCell = document.createElement('td');
+      emptyCell.colSpan = 100;
+      emptyCell.className = 'text-center py-12 text-slate-400';
+      emptyCell.textContent = 'لا توجد بيانات تطابق الفلاتر';
+      emptyRow.appendChild(emptyCell);
+      dom.previewBody.appendChild(emptyRow);
       return;
     }
 
     const visibleKeys = Object.keys(state.filteredData[0]).filter((k) => !config.alwaysDeleteColumns.includes(k));
-    dom.previewHead.innerHTML = `<tr>${visibleKeys.map((k) => `<th>${k}</th>`).join('')}</tr>`;
+    const headerRow = document.createElement('tr');
+    visibleKeys.forEach((key) => {
+      const th = document.createElement('th');
+      th.textContent = key;
+      headerRow.appendChild(th);
+    });
+    dom.previewHead.appendChild(headerRow);
 
     const start = (state.currentPage - 1) * config.rowsPerPage;
     const end = state.currentPage * config.rowsPerPage;
     const pageData = state.filteredData.slice(start, end);
 
-    dom.previewBody.innerHTML = pageData
-      .map((row) => `<tr>${visibleKeys.map((key) => `<td>${String(row[key] ?? '')}</td>`).join('')}</tr>`)
-      .join('');
+    pageData.forEach((row) => {
+      const tr = document.createElement('tr');
+      visibleKeys.forEach((key) => {
+        const td = document.createElement('td');
+        td.textContent = String(row[key] ?? '');
+        tr.appendChild(td);
+      });
+      dom.previewBody.appendChild(tr);
+    });
   }
 
   function changePage(direction) {
@@ -210,6 +262,14 @@
 
   function sanitizeFilename(value) {
     return (value || 'NA').toString().replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+  }
+
+  function escapeExcelValue(value) {
+    if (typeof value !== 'string') return value;
+    if (/^[=+\-@]/.test(value)) {
+      return `'${value}`;
+    }
+    return value;
   }
 
   function getSelectedSmartLabel() {
@@ -242,13 +302,14 @@
       Object.keys(next).forEach(key => {
         if (typeof next[key] === 'string') {
           next[key] = next[key].replace(/\s\s+/g, ' ').trim();
+          next[key] = escapeExcelValue(next[key]);
         }
       });
 
       if (next.CreatedOn) {
         const created = new Date(next.CreatedOn);
         if (!Number.isNaN(created.getTime())) {
-          next.CreatedOn = `${created.getFullYear()}/${created.getMonth() + 1}/${created.getDate()}`;
+          next.CreatedOn = escapeExcelValue(`${created.getFullYear()}/${created.getMonth() + 1}/${created.getDate()}`);
         }
       }
       return next;

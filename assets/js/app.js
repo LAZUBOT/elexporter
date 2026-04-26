@@ -216,6 +216,12 @@
     return (value || 'NA').toString().replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
   }
 
+  function getSelectedSmartLabel() {
+    if (state.currentSmartFilter === 'all') return '';
+    const button = config.smartButtons.find((item) => item.key === state.currentSmartFilter);
+    return button ? button.label : state.currentSmartFilter;
+  }
+
   function exportExcel(data, fileName, status) {
     const statusText = (status || '').toString().toLowerCase();
     const isPendingOnly = statusText.includes('pending') && !statusText.includes('done');
@@ -295,14 +301,16 @@
 
           if (!subset.length) return;
 
-          const filename = [
+          const smartLabel = gov === 'FTK' && state.currentSmartFilter !== 'all' ? getSelectedSmartLabel() : '';
+          const filenameParts = [
             config.govMap[gov] || gov,
+            smartLabel,
             contractor,
             status,
             new Date().toISOString().split('T')[0]
-          ]
-            .map(sanitizeFilename)
-            .join('_');
+          ].filter(Boolean);
+
+          const filename = filenameParts.map(sanitizeFilename).join('_');
 
           exportExcel(subset, filename, status);
           fileCount += 1;

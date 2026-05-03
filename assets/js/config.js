@@ -24,7 +24,7 @@ window.EL_CONVERTER_CONFIG = {
     alam: { ranges: [[238, 252]], specials: [] },
     dujail: { ranges: [[192, 207]], specials: [] },
     dhuluiya: { ranges: [[257, 272]], specials: [] },
-    tuz: { ranges: [[128, 162]], specials: [216] },
+    tuz: { ranges: [[128, 162], [216]], specials: [348] },
     door: { ranges: [[208, 215]], specials: [] },
     sulaiman_bek: { ranges: [[278, 282]], specials: [] },
     baiji: { ranges: [[163, 191]], specials: [312] },

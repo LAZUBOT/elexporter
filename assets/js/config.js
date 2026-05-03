@@ -1,0 +1,85 @@
+window.EL_CONVERTER_CONFIG = {
+  govMap: {
+    FDW: 'Qadisiya',
+    FBG: 'Baghdad',
+    FKU: 'Wasit',
+    FNJ: 'Najaf',
+    FRM: 'Anbar',
+    FBB: 'Babil',
+    FBS: 'Basrah',
+    FKR: 'Karballa',
+    FTK: 'Salah aldin',
+    FKK: 'Kirkuk',
+    FAM: 'Misan',
+    FMU: 'Muthanna',
+    FNS: 'Thy Qar',
+    FDY: 'Diala',
+    FMS: 'Naynawa'
+  },
+
+  smartZones: {
+    in_house: { ranges: [], specials: [8888] },
+    tikrit: { ranges: [[1, 44], [98, 99], [7000, 7300]], specials: [103] },
+    samarra: { ranges: [[45, 97], [100, 102], [253, 256]], specials: [] },
+    alam: { ranges: [[238, 252]], specials: [] },
+    dujail: { ranges: [[192, 207]], specials: [] },
+    dhuluiya: { ranges: [[257, 272]], specials: [] },
+    tuz: { ranges: [[128, 162], [216]], specials: [348] },
+    door: { ranges: [[208, 215]], specials: [] },
+    sulaiman_bek: { ranges: [[278, 282]], specials: [] },
+    baiji: { ranges: [[163, 191]], specials: [312] },
+    shirqat: { ranges: [[217, 237]], specials: [] },
+    siniya: { ranges: [[288, 294]], specials: [] },
+    balad: { ranges: [[104, 127], [332, 343]], specials: [] },
+    amerli: { ranges: [[283, 287]], specials: [] },
+    ishaqi: { ranges: [[313, 314]], specials: [] },
+    hajjaj: { ranges: [[304, 311]], specials: [315] },
+    zawiya: { ranges: [[273, 277]], specials: [] },
+    sadira: { ranges: [[322, 331]], specials: [346] },
+    yankaja: { ranges: [[296, 297]], specials: [] },
+    shukra: { ranges: [[316, 321]], specials: [] },
+    hijal: { ranges: [[298, 303]], specials: [344, 345] }
+  },
+
+  smartButtons: [
+    { key: 'all', label: 'الكل' },
+    { key: 'in_house', label: 'ان هاوس' },
+    { key: 'tikrit', label: 'تكريت' },
+    { key: 'samarra', label: 'سامراء' },
+    { key: 'alam', label: 'العلم' },
+    { key: 'dujail', label: 'الدجيل' },
+    { key: 'dhuluiya', label: 'الضلوعية' },
+    { key: 'tuz', label: 'الطوز' },
+    { key: 'door', label: 'الدور' },
+    { key: 'baiji', label: 'بيجي' },
+    { key: 'shirqat', label: 'الشرقاط' },
+    { key: 'balad', label: 'بلد' },
+    { key: 'sulaiman_bek', label: 'سليمان بيك' },
+    { key: 'siniya', label: 'الصينية' },
+    { key: 'amerli', label: 'امرلي' },
+    { key: 'ishaqi', label: 'الاسحاقي' },
+    { key: 'hajjaj', label: 'الحجاج' },
+    { key: 'zawiya', label: 'الزوية' },
+    { key: 'sadira', label: 'سديرة' },
+    { key: 'yankaja', label: 'ينكجه' },
+    { key: 'shukra', label: 'شكرا' },
+    { key: 'hijal', label: 'حجل' }
+  ],
+
+  alwaysDeleteColumns: [
+    'Address',
+    'Notes',
+    'House',
+    'Street',
+    'Email',
+    'Name',
+    'UsrGPSLocationLongitude',
+    'UsrGPSLocationLatitude',
+    'ModifiedOn'
+  ],
+
+  pendingOnlyDeleteColumns: ['FDT', 'FAT', 'Device Username'],
+
+  rowsPerPage: 50,
+  defaultSheetName: 'Data'
+};

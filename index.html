@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EL Tools Data Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="bg-[#f8fafc] min-h-screen text-slate-900">
+    <div class="max-w-7xl mx-auto py-8 px-4">
+        <div class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+            <div class="text-center md:text-right w-full">
+                <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900">EL CSV2Excel</h1>
+                <p class="text-slate-500 mt-1">Tools Data Converter - Multi-Gov Export</p>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-2xl shadow-sm border overflow-hidden">
+            <div class="p-6 border-b bg-white">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">1</div>
+                    <h2 class="text-lg font-bold">تحميل ملف الـ CSV</h2>
+                </div>
+                <input type="file" id="csvInput" accept=".csv" class="block w-full text-sm text-slate-500 file:ml-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-slate-900 file:text-white border-2 border-dashed rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-colors">
+            </div>
+
+            <div id="configSection" class="hidden p-6 bg-[#fcfdfe]">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">2</div>
+                    <h2 class="text-lg font-bold">البحث والفلترة والتصدير</h2>
+                </div>
+
+<div class="mb-8 bg-white border rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">2</div>
+                        <h2 class="text-lg font-bold">البحث العام</h2>
+                    </div>
+                    <label class="block text-xs font-bold text-slate-500 mb-2 uppercase">بحث يدوي بالمنطقة</label>
+                    <input type="text" id="zoneNameFilter" placeholder="مثال: FTK0001" class="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-blue-500">
+                </div>
+
+                <div class="mb-8 bg-white border rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">3</div>
+                        <h2 class="text-lg font-bold">الفلترة والتحميل المتعدد</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                        <div class="bg-white p-4 rounded-xl border shadow-sm">
+                            <div class="flex justify-between mb-2">
+                                <label class="text-sm font-bold">المحافظات (تحديد متعدد)</label>
+                                <span id="govCount" class="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                            </div>
+                            <div id="govContainer" class="checkbox-group-container"></div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-xl border shadow-sm">
+                            <div class="flex justify-between mb-2">
+                                <label class="text-sm font-bold">المقاولون (تحديد متعدد)</label>
+                                <span id="contractorCount" class="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                            </div>
+                            <div id="contractorContainer" class="checkbox-group-container"></div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-xl border shadow-sm">
+                            <div class="flex justify-between mb-2">
+                                <label class="text-sm font-bold">الحالة (تحديد متعدد)</label>
+                                <span id="statusCount" class="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                            </div>
+                            <div id="statusContainer" class="checkbox-group-container"></div>
+                        </div>
+
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm">
+                            <label class="block text-xs font-bold text-blue-600 mb-1 uppercase">ملاحظة التصدير</label>
+                            <p class="text-[11px] text-blue-500 leading-relaxed">سيتم إنشاء ملف منفصل لكل تركيبة مختارة (محافظة + مقاول + حالة) لسهولة الأرشفة.</p>
+                            <p id="smartSelectionNote" class="text-[11px] text-blue-600 leading-relaxed mt-2 hidden"></p>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 hidden bg-slate-50 border border-slate-200 rounded-2xl p-5 transition-all duration-300" id="smartGroupContainer">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                            <div>
+                                <div class="text-sm font-bold text-slate-800">المناطق الذكية</div>
+                                <div class="text-xs text-slate-500">تظهر عند اختيار صلاح الدين منفردة</div>
+                            </div>
+                            <span class="text-[11px] text-slate-500">اختر المنطقة الذكية ثم صدّر الملف</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2 overflow-x-auto pb-2" id="smartGroups"></div>
+                    </div>
+                </div>
+
+                <div class="mb-8 bg-white border rounded-2xl p-6 shadow-sm">
+                    <div class="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">5</div>
+                            <h2 class="text-lg font-bold">رؤية النتائج</h2>
+                        </div>
+                        <div class="flex items-center gap-4 bg-slate-50 p-2 rounded-lg border">
+                            <button id="prevPage" class="pagination-btn">السابق</button>
+                            <div class="text-sm font-bold text-slate-700">
+                                صفحة <span id="currentPageNum" class="text-blue-600">1</span> من <span id="totalPagesNum">1</span>
+                            </div>
+                            <button id="nextPage" class="pagination-btn">التالي</button>
+                        </div>
+                        <div class="text-sm font-medium text-slate-600 bg-blue-50 px-4 py-2 rounded-lg">
+                            الإجمالي للفلاتر: <span id="countNumber" class="text-blue-600 font-bold">0</span> صف
+                        </div>
+                    </div>
+                    <div class="table-container shadow-inner bg-slate-50 rounded-xl">
+                        <table id="previewTable">
+                            <thead id="previewHead"></thead>
+                            <tbody id="previewBody">
+                                <tr>
+                                    <td colspan="100%" class="text-center py-12 text-slate-400">يرجى تحميل ملف لظهور البيانات</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 p-6 rounded-2xl flex flex-col md:flex-row items-center gap-4 text-white shadow-xl">
+                    <div class="flex items-center gap-3 mb-4 md:mb-0">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">6</div>
+                        <div>
+                            <p class="font-bold text-xl">بدء الاستخراج المتعدد المنفصل</p>
+                            <p class="text-slate-400 text-sm opacity-90 mt-1">سيتم تحميل ملف Excel لكل اختيار من (المحافظة + المقاول + الحالة).</p>
+                        </div>
+                    </div>
+                    <button id="convertBtn" class="w-full md:w-auto bg-blue-600 text-white font-bold py-4 px-14 rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all text-lg">تحميل كل الملفات المنفصلة</button>
+                </div>
+            </div>
+
+            <div id="statusMsg" class="p-4 text-center text-sm font-bold hidden border-t"></div>
+        </div>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>

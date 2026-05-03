@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EL Tools Data Converter</title>
+    <!-- استدعاء مكتبة Tailwind CSS للتصميم -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- استدعاء مكتبة SheetJS لإنشاء ملفات الإكسل -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- استدعاء مكتبة PapaParse لقراءة ملفات CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <!-- الأنماط المخصصة (CSS) -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', 'Noto Sans Arabic', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .glass-card { background: white; border: 1px solid #e2e8f0; }
+        .checkbox-group-container { max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.75rem; background: #fff; }
+        .checkbox-item { display: flex; align-items: center; padding: 0.6rem 1rem; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
+        .checkbox-item:hover { background-color: #f8fafc; }
+        .checkbox-item input[type='checkbox'] { width: 1.1rem; height: 1.1rem; margin-left: 0.75rem; flex-shrink: 0; }
+        .group-btn { transition: all 0.2s; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.825rem; font-weight: 500; white-space: nowrap; cursor: pointer; background: white; }
+        .group-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); }
+        .table-container { max-height: 500px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 0.75rem; line-height: 1.35; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: auto; }
+        th { position: sticky; top: 0; background: #f8fafc; z-index: 10; padding: 12px; border-bottom: 2px solid #e2e8f0; text-align: right; white-space: normal; vertical-align: top; }
+        td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: normal; word-break: break-word; overflow-wrap: anywhere; vertical-align: top; }
+        tr:hover { background-color: #f1f5f9; }
+        .pagination-btn { padding: 0.5rem 1rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; font-size: 0.875rem; transition: all 0.2s; }
+        .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        /* تصميم زر تحديد الكل */
+        .select-all-btn { font-size: 0.7rem; color: #2563eb; cursor: pointer; background: none; border: none; padding: 0; margin-left: 8px; font-weight: 600; text-decoration: underline; }
+        .select-all-btn:hover { color: #1d4ed8; }
+    </style>
+</head>
+<body class="bg-[#f8fafc] min-h-screen text-slate-900">
+    <div class="max-w-7xl mx-auto py-8 px-4">
+        <!-- ترويسة الصفحة -->
+        <div class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+            <div class="text-center md:text-right w-full">
+                <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900">EL CSV2Excel</h1>
+                <p class="text-slate-500 mt-1">Tools Data Converter - Multi-Gov Export</p>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-2xl shadow-sm border overflow-hidden">
+            <!-- القسم الأول: رفع الملف -->
+            <div class="p-6 border-b bg-white">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">1</div>
+                    <h2 class="text-lg font-bold">تحميل ملف الـ CSV</h2>
+                </div>
+                <input type="file" id="csvInput" accept=".csv" class="block w-full text-sm text-slate-500 file:ml-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-slate-900 file:text-white border-2 border-dashed rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-colors">
+            </div>
+
+            <!-- القسم الثاني: الإعدادات والفلترة (مخفي حتى يتم رفع الملف) -->
+            <div id="configSection" class="hidden p-6 bg-[#fcfdfe]">
+                
+                <!-- البحث اليدوي -->
+                <div class="mb-8 bg-white border rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">2</div>
+                        <h2 class="text-lg font-bold">البحث العام</h2>
+                    </div>
+                    <label class="block text-xs font-bold text-slate-500 mb-2 uppercase">بحث يدوي بالمنطقة</label>
+                    <input type="text" id="zoneNameFilter" placeholder="مثال: FTK0001" class="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-blue-500">
+                </div>
+
+                <!-- الفلاتر المتعددة -->
+                <div class="mb-8 bg-white border rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">3</div>
+                        <h2 class="text-lg font-bold">الفلترة والتحميل المتعدد</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                        <!-- المحافظات -->
+                        <div class="bg-white p-4 rounded-xl border shadow-sm flex flex-col">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-bold">المحافظات</label>
+                                <div class="flex items-center">
+                                    <button type="button" id="btnSelectAllGov" class="select-all-btn">تحديد الكل</button>
+                                    <span id="govCount" class="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                                </div>
+                            </div>
+                            <div id="govContainer" class="checkbox-group-container flex-1"></div>
+                        </div>
+
+                        <!-- المقاولون -->
+                        <div class="bg-white p-4 rounded-xl border shadow-sm flex flex-col">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-bold">المقاولون</label>
+                                <div class="flex items-center">
+                                    <button type="button" id="btnSelectAllCon" class="select-all-btn">تحديد الكل</button>
+                                    <span id="contractorCount" class="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                                </div>
+                            </div>
+                            <div id="contractorContainer" class="checkbox-group-container flex-1"></div>
+                        </div>
+
+                        <!-- الحالة -->
+                        <div class="bg-white p-4 rounded-xl border shadow-sm flex flex-col">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-bold">الحالة</label>
+                                <div class="flex items-center">
+                                    <button type="button" id="btnSelectAllStat" class="select-all-btn">تحديد الكل</button>
+                                    <span id="statusCount" class="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                                </div>
+                            </div>
+                            <div id="statusContainer" class="checkbox-group-container flex-1"></div>
+                        </div>
+
+                        <!-- ملاحظات -->
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-center">
+                            <label class="block text-xs font-bold text-blue-600 mb-1 uppercase">ملاحظة التصدير</label>
+                            <p class="text-[11px] text-blue-500 leading-relaxed">سيتم إنشاء ملف منفصل لكل تركيبة مختارة من (محافظة + مقاول)، بينما سيتم دمج الحالات المختارة معاً في نفس الملف.</p>
+                            <p id="smartSelectionNote" class="text-[11px] text-blue-600 leading-relaxed mt-2 hidden"></p>
+                        </div>
+                    </div>
+
+                    <!-- الفلاتر الذكية (تظهر لشروط معينة مثل صلاح الدين) -->
+                    <div class="mb-4 hidden bg-slate-50 border border-slate-200 rounded-2xl p-5 transition-all duration-300" id="smartGroupContainer">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                            <div>
+                                <div class="text-sm font-bold text-slate-800">المناطق الذكية</div>
+                                <div class="text-xs text-slate-500">تظهر عند اختيار صلاح الدين منفردة</div>
+                            </div>
+                            <span class="text-[11px] text-slate-500">اختر المنطقة الذكية ثم صدّر الملف</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2 overflow-x-auto pb-2" id="smartGroups"></div>
+                    </div>
+                </div>
+
+                <!-- جدول عرض البيانات -->
+                <div class="mb-8 bg-white border rounded-2xl p-6 shadow-sm">
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">4</div>
+                            <h2 class="text-lg font-bold">رؤية النتائج</h2>
+                        </div>
+                        
+                        <div class="flex flex-col gap-2 w-full md:w-auto">
+                            <!-- مؤشر الإحصائيات (الجديد) -->
+                            <div id="statusBreakdown" class="text-xs font-medium text-slate-500 bg-slate-100 px-4 py-2 rounded-lg text-center md:text-right hidden border border-slate-200">
+                                <!-- سيتم إدراج الإحصائيات هنا -->
+                            </div>
+                            
+                            <div class="flex items-center justify-between md:justify-end gap-4 bg-slate-50 p-2 rounded-lg border w-full">
+                                <button id="prevPage" class="pagination-btn">السابق</button>
+                                <div class="text-sm font-bold text-slate-700">
+                                    صفحة <span id="currentPageNum" class="text-blue-600">1</span> من <span id="totalPagesNum">1</span>
+                                </div>
+                                <button id="nextPage" class="pagination-btn">التالي</button>
+                            </div>
+                        </div>
+
+                        <div class="text-sm font-medium text-slate-600 bg-blue-50 px-4 py-3 rounded-lg border border-blue-100 w-full md:w-auto text-center">
+                            الإجمالي: <span id="countNumber" class="text-blue-600 font-bold text-lg">0</span> صف
+                        </div>
+                    </div>
+                    <div class="table-container shadow-inner bg-slate-50 rounded-xl">
+                        <table id="previewTable">
+                            <thead id="previewHead"></thead>
+                            <tbody id="previewBody">
+                                <tr>
+                                    <td colspan="100%" class="text-center py-12 text-slate-400">يرجى تحميل ملف لظهور البيانات</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- زر الاستخراج -->
+                <div class="bg-slate-900 p-6 rounded-2xl flex flex-col lg:flex-row items-center gap-6 text-white shadow-xl">
+                    <div class="flex items-center gap-3 mb-4 lg:mb-0 flex-1">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shrink-0">5</div>
+                        <div>
+                            <p class="font-bold text-xl">خيارات الاستخراج والتنزيل</p>
+                            <p class="text-slate-400 text-sm opacity-90 mt-1">يمكنك تحميل البيانات كملفات مقسمة (حسب المحافظة والمقاول) أو كملف واحد شامل لكل النتائج.</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                        <button id="exportSingleBtn" class="flex-1 bg-slate-700 text-white font-bold py-3 px-6 rounded-xl shadow hover:bg-slate-600 active:scale-95 transition-all text-sm md:text-base border border-slate-600">تحميل كملف واحد</button>
+                        <button id="convertBtn" class="flex-1 bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all text-sm md:text-base border border-blue-600">تحميل ملفات منفصلة</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="statusMsg" class="p-4 text-center text-sm font-bold hidden border-t"></div>
+        </div>
+    </div>
+
+    <!-- كود الجافاسكربت للتكوين (Configuration) -->
+    <script>
+        window.EL_CONVERTER_CONFIG = {
+            govMap: {
+                FDW: 'Qadisiya',
+                FBG: 'Baghdad',
+                FKU: 'Wasit',
+                FNJ: 'Najaf',
+                FRM: 'Anbar',
+                FBB: 'Babil',
+                FBS: 'Basrah',
+                FKR: 'Karballa',
+                FTK: 'Salah aldin',
+                FKK: 'Kirkuk',
+                FAM: 'Misan',
+                FMU: 'Muthanna',
+                FNS: 'Thy Qar',
+                FDY: 'Diala',
+                FMS: 'Naynawa'
+            },
+
+            smartZones: {
+                in_house: { ranges: [], specials: [8888] },
+                tikrit: { ranges: [[1, 44], [98, 99], [7000, 7300]], specials: [103] },
+                samarra: { ranges: [[45, 97], [100, 102], [253, 256]], specials: [] },
+                alam: { ranges: [[238, 252]], specials: [] },
+                dujail: { ranges: [[192, 207]], specials: [] },
+                dhuluiya: { ranges: [[257, 272]], specials: [] },
+                tuz: { ranges: [[128, 162], [216]], specials: [348] },
+                door: { ranges: [[208, 215]], specials: [] },
+                sulaiman_bek: { ranges: [[278, 282]], specials: [] },
+                baiji: { ranges: [[163, 191]], specials: [312] },
+                shirqat: { ranges: [[217, 237]], specials: [] },
+                siniya: { ranges: [[288, 294]], specials: [] },
+                balad: { ranges: [[104, 127], [332, 343]], specials: [] },
+                amerli: { ranges: [[283, 287]], specials: [] },
+                ishaqi: { ranges: [[313, 314]], specials: [] },
+                hajjaj: { ranges: [[304, 311]], specials: [315] },
+                zawiya: { ranges: [[273, 277]], specials: [] },
+                sadira: { ranges: [[322, 331]], specials: [346] },
+                yankaja: { ranges: [[296, 297]], specials: [] },
+                shukra: { ranges: [[316, 321]], specials: [] },
+                hijal: { ranges: [[298, 303]], specials: [344, 345] }
+            },
+
+            smartButtons: [
+                { key: 'all', label: 'الكل' },
+                { key: 'in_house', label: 'ان هاوس' },
+                { key: 'tikrit', label: 'تكريت' },
+                { key: 'samarra', label: 'سامراء' },
+                { key: 'alam', label: 'العلم' },
+                { key: 'dujail', label: 'الدجيل' },
+                { key: 'dhuluiya', label: 'الضلوعية' },
+                { key: 'tuz', label: 'الطوز' },
+                { key: 'door', label: 'الدور' },
+                { key: 'baiji', label: 'بيجي' },
+                { key: 'shirqat', label: 'الشرقاط' },
+                { key: 'balad', label: 'بلد' },
+                { key: 'sulaiman_bek', label: 'سليمان بيك' },
+                { key: 'siniya', label: 'الصينية' },
+                { key: 'amerli', label: 'امرلي' },
+                { key: 'ishaqi', label: 'الاسحاقي' },
+                { key: 'hajjaj', label: 'الحجاج' },
+                { key: 'zawiya', label: 'الزوية' },
+                { key: 'sadira', label: 'سديرة' },
+                { key: 'yankaja', label: 'ينكجه' },
+                { key: 'shukra', label: 'شكرا' },
+                { key: 'hijal', label: 'حجل' }
+            ],
+
+            alwaysDeleteColumns: [
+                'Address', 'Notes', 'House', 'Street', 'Email', 
+                'Name', 'UsrGPSLocationLongitude', 'UsrGPSLocationLatitude', 'ModifiedOn'
+            ],
+
+            pendingOnlyDeleteColumns: ['FDT', 'FAT', 'Device Username'],
+
+            rowsPerPage: 50,
+            defaultSheetName: 'Data'
+        };
+    </script>
+
+    <!-- كود الجافاسكربت الرئيسي (App Logic) -->
+    <script>
+        (() => {
+            // جلب الإعدادات
+            const config = window.EL_CONVERTER_CONFIG;
+            if (!config) {
+                console.error('EL_CONVERTER_CONFIG is missing.');
+                return;
+            }
+
+            // حالة التطبيق
+            const state = {
+                rawData: [],
+                filteredData: [],
+                currentPage: 1,
+                currentSmartFilter: 'all'
+            };
+
+            // عناصر واجهة المستخدم
+            const dom = {
+                csvInput: document.getElementById('csvInput'),
+                configSection: document.getElementById('configSection'),
+                govContainer: document.getElementById('govContainer'),
+                contractorContainer: document.getElementById('contractorContainer'),
+                statusContainer: document.getElementById('statusContainer'),
+                smartGroupContainer: document.getElementById('smartGroupContainer'),
+                smartGroups: document.getElementById('smartGroups'),
+                zoneNameInput: document.getElementById('zoneNameFilter'),
+                smartSelectionNote: document.getElementById('smartSelectionNote'),
+                convertBtn: document.getElementById('convertBtn'),
+                exportSingleBtn: document.getElementById('exportSingleBtn'), // الزر الجديد
+                previewBody: document.getElementById('previewBody'),
+                previewHead: document.getElementById('previewHead'),
+                countNumber: document.getElementById('countNumber'),
+                statusBreakdown: document.getElementById('statusBreakdown'), // شريط الإحصائيات
+                statusMsg: document.getElementById('statusMsg'),
+                govCount: document.getElementById('govCount'),
+                contractorCount: document.getElementById('contractorCount'),
+                statusCount: document.getElementById('statusCount'),
+                totalPagesNum: document.getElementById('totalPagesNum'),
+                currentPageNum: document.getElementById('currentPageNum'),
+                prevPage: document.getElementById('prevPage'),
+                nextPage: document.getElementById('nextPage'),
+                // أزرار تحديد الكل
+                btnSelectAllGov: document.getElementById('btnSelectAllGov'),
+                btnSelectAllCon: document.getElementById('btnSelectAllCon'),
+                btnSelectAllStat: document.getElementById('btnSelectAllStat')
+            };
+
+            // دالة لمنع التهنيج عند البحث السريع (Debounce)
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+
+            // دالة للحصول على القيم المحددة من صناديق الاختيار (Checkboxes)
+            function getCheckedValues(name) {
+                return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map((cb) => cb.value);
+            }
+
+            // دالة لتحديد/إلغاء تحديد الكل
+            function toggleAllCheckboxes(containerId, name) {
+                const container = document.getElementById(containerId);
+                const checkboxes = container.querySelectorAll(`input[name="${name}"]`);
+                if (checkboxes.length === 0) return;
+
+                // التحقق مما إذا كان الكل محدد حالياً لنعكس الحالة
+                const isAllChecked = Array.from(checkboxes).every(cb => cb.checked);
+                const newState = !isAllChecked;
+
+                checkboxes.forEach(cb => cb.checked = newState);
+
+                // استدعاء الدوال المرتبطة بالتحديث يدوياً لأن تغيير checked برمجياً لا يطلق حدث 'change'
+                if (name === 'gov') updateContractorOptions();
+                else if (name === 'contractor') updateStatusOptions();
+                else if (name === 'status') updateGlobalFilters();
+            }
+
+            // دالة لجلب اسم المنطقة بأمان
+            function getZoneValue(row) {
+                return (row['Zone Name'] || '').toString().toUpperCase();
+            }
+
+            // دالة لإنشاء صناديق الاختيار ديناميكياً
+            function buildCheckboxes(container, name, values, onChange) {
+                container.innerHTML = '';
+                const fragment = document.createDocumentFragment();
+
+                values.forEach((value) => {
+                    const label = document.createElement('label');
+                    label.className = 'checkbox-item';
+
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.name = name;
+                    input.value = value;
+
+                    const span = document.createElement('span');
+                    span.className = 'mr-2 text-sm';
+                    span.textContent = value;
+
+                    label.appendChild(input);
+                    label.appendChild(span);
+                    fragment.appendChild(label);
+
+                    input.addEventListener('change', onChange);
+                });
+
+                container.appendChild(fragment);
+            }
+
+            // تهيئة أزرار الفلاتر الذكية
+            function initSmartButtons() {
+                dom.smartGroups.innerHTML = '';
+                const fragment = document.createDocumentFragment();
+
+                config.smartButtons.forEach(({ key, label }) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = `group-btn ${key === 'all' ? 'active' : ''}`;
+                    button.dataset.filter = key;
+                    button.textContent = label;
+
+                    button.addEventListener('click', () => {
+                        state.currentSmartFilter = button.dataset.filter;
+                        dom.smartGroups.querySelectorAll('.group-btn').forEach((btn) => {
+                            btn.classList.toggle('active', btn.dataset.filter === state.currentSmartFilter);
+                        });
+                        updateGlobalFilters();
+                        updateSmartNote();
+                    });
+
+                    fragment.appendChild(button);
+                });
+
+                dom.smartGroups.appendChild(fragment);
+            }
+
+            // قراءة ملف الـ CSV
+            function parseCsv(file) {
+                // تصفير الواجهة عند رفع ملف جديد
+                dom.zoneNameInput.value = '';
+                state.currentSmartFilter = 'all';
+
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        state.rawData = Array.isArray(results.data) ? results.data : [];
+                        initGovs(); // تهيئة المحافظات بناءً على البيانات
+                        dom.configSection.classList.remove('hidden');
+                        dom.statusMsg.classList.add('hidden'); // إخفاء أي رسائل سابقة
+                        updateGlobalFilters();
+                    },
+                    error: () => {
+                        showStatus('فشل في قراءة ملف CSV. تأكد من سلامة الملف.', 'bg-red-100 text-red-700');
+                    }
+                });
+            }
+
+            // تهيئة قائمة المحافظات بناءً على البيانات المتوفرة في الـ CSV
+            function initGovs() {
+                const availableGovs = [...new Set(state.rawData.map((r) => getZoneValue(r).substring(0, 3)))]
+                    .filter((code) => config.govMap[code])
+                    .sort();
+
+                const displayValues = availableGovs.map((code) => `${config.govMap[code]} (${code})`);
+                buildCheckboxes(dom.govContainer, 'gov', availableGovs, updateContractorOptions);
+                
+                // تعديل نصوص المعاينة
+                const checkboxes = dom.govContainer.querySelectorAll('input');
+                checkboxes.forEach((cb, i) => {
+                    cb.nextElementSibling.textContent = displayValues[i];
+                });
+
+                updateContractorOptions();
+            }
+
+            // الفلترة الأساسية للبيانات
+            function filterBySelections(rows, selectedGovs, selectedCons, selectedStats, zoneQuery) {
+                return rows.filter((row) => {
+                    const zoneStr = getZoneValue(row);
+                    const zoneNum = parseInt(zoneStr.match(/\d+/)?.[0] || '-1', 10);
+                    const contractor = (row['Zone Contractor'] || '').toString();
+                    const status = (row.Status || '').toString();
+
+                    const matchesGov = selectedGovs.length === 0 || selectedGovs.some((g) => zoneStr.startsWith(g));
+                    const matchesCon = selectedCons.length === 0 || selectedCons.includes(contractor);
+                    const matchesStat = selectedStats.length === 0 || selectedStats.includes(status);
+                    const matchesManual = !zoneQuery || zoneStr.toLowerCase().includes(zoneQuery);
+
+                    let matchesSmart = true;
+                    // تفعيل الفلتر الذكي فقط إذا تم اختيار صلاح الدين (FTK) كخيار وحيد
+                    if (selectedGovs.length === 1 && selectedGovs[0] === 'FTK' && state.currentSmartFilter !== 'all') {
+                        const smartConfig = config.smartZones[state.currentSmartFilter] || { ranges: [], specials: [] };
+                        matchesSmart =
+                            smartConfig.ranges.some((range) => zoneNum >= range[0] && zoneNum <= range[1]) ||
+                            smartConfig.specials.includes(zoneNum);
+                    }
+
+                    return matchesGov && matchesCon && matchesStat && matchesManual && matchesSmart;
+                });
+            }
+
+            // تحديث خيارات المقاولين بناءً على المحافظة المختارة
+            function updateContractorOptions() {
+                const selectedGovs = getCheckedValues('gov');
+
+                if (selectedGovs.length === 1 && selectedGovs[0] === 'FTK') {
+                    dom.smartGroupContainer.classList.remove('hidden');
+                } else {
+                    dom.smartGroupContainer.classList.add('hidden');
+                    state.currentSmartFilter = 'all';
+                    dom.smartGroups.querySelectorAll('.group-btn').forEach((btn) => {
+                        btn.classList.toggle('active', btn.dataset.filter === 'all');
+                    });
+                }
+
+                updateSmartNote();
+
+                // تحديث نص زر تحديد الكل للمحافظات
+                const allGovs = dom.govContainer.querySelectorAll('input').length;
+                dom.btnSelectAllGov.textContent = (selectedGovs.length === allGovs && allGovs > 0) ? 'إلغاء الكل' : 'تحديد الكل';
+
+                const subset = filterBySelections(state.rawData, selectedGovs, [], [], '');
+                const contractors = [...new Set(subset.map((row) => (row['Zone Contractor'] || '').toString()).filter(Boolean))].sort();
+                
+                // حفظ الاختيارات السابقة للمقاولين حتى لا تضيع عند التحديث
+                const prevSelectedCons = getCheckedValues('contractor');
+                
+                buildCheckboxes(dom.contractorContainer, 'contractor', contractors, updateStatusOptions);
+                
+                // إعادة تحديد المقاولين الذين كانوا محددين وموجودين في القائمة الجديدة
+                dom.contractorContainer.querySelectorAll('input').forEach(cb => {
+                    if(prevSelectedCons.includes(cb.value)) cb.checked = true;
+                });
+
+                updateStatusOptions();
+            }
+
+            // تحديث خيارات الحالة بناءً على المقاول والمحافظة
+            function updateStatusOptions() {
+                const selectedGovs = getCheckedValues('gov');
+                const selectedCons = getCheckedValues('contractor');
+                
+                // تحديث نص زر تحديد الكل للمقاولين
+                const allCons = dom.contractorContainer.querySelectorAll('input').length;
+                dom.btnSelectAllCon.textContent = (selectedCons.length === allCons && allCons > 0) ? 'إلغاء الكل' : 'تحديد الكل';
+
+                const subset = filterBySelections(state.rawData, selectedGovs, selectedCons, [], '');
+                const statuses = [...new Set(subset.map((row) => (row.Status || '').toString()).filter(Boolean))].sort();
+                
+                // حفظ الاختيارات السابقة للحالة
+                const prevSelectedStats = getCheckedValues('status');
+
+                buildCheckboxes(dom.statusContainer, 'status', statuses, updateGlobalFilters);
+
+                // إعادة تحديد الحالات
+                dom.statusContainer.querySelectorAll('input').forEach(cb => {
+                    if(prevSelectedStats.includes(cb.value)) cb.checked = true;
+                });
+
+                updateGlobalFilters();
+            }
+
+            // تحديث كل الفلاتر وعرض النتائج
+            function updateGlobalFilters() {
+                const selectedGovs = getCheckedValues('gov');
+                const selectedCons = getCheckedValues('contractor');
+                const selectedStats = getCheckedValues('status');
+                const zoneQuery = dom.zoneNameInput.value.trim().toLowerCase();
+
+                dom.govCount.innerText = selectedGovs.length;
+                dom.contractorCount.innerText = selectedCons.length;
+                dom.statusCount.innerText = selectedStats.length;
+
+                // تحديث نص زر تحديد الكل للحالة
+                const allStats = dom.statusContainer.querySelectorAll('input').length;
+                dom.btnSelectAllStat.textContent = (selectedStats.length === allStats && allStats > 0) ? 'إلغاء الكل' : 'تحديد الكل';
+
+                state.filteredData = filterBySelections(state.rawData, selectedGovs, selectedCons, selectedStats, zoneQuery);
+                state.currentPage = 1;
+                renderPreview();
+                updateSmartNote();
+            }
+
+            // عرض النتائج في الجدول (مع التقسيم لصفحات) وتحديث الإحصائيات
+            function renderPreview() {
+                dom.countNumber.innerText = state.filteredData.length;
+                
+                // حساب إحصائيات الحالات (Status Breakdown)
+                const statusCounts = {};
+                state.filteredData.forEach(row => {
+                    const statusVal = (row.Status || 'غير محدد').toString();
+                    statusCounts[statusVal] = (statusCounts[statusVal] || 0) + 1;
+                });
+
+                if (state.filteredData.length > 0) {
+                    // تحويل الكائن إلى نص منسق HTML
+                    const breakdownText = Object.entries(statusCounts)
+                        .map(([statusName, count]) => `${statusName}: <span class="text-blue-700 font-bold ml-1">${count}</span>`)
+                        .join(' <span class="text-slate-300 mx-2">|</span> ');
+                    
+                    dom.statusBreakdown.innerHTML = breakdownText;
+                    dom.statusBreakdown.classList.remove('hidden');
+                } else {
+                    dom.statusBreakdown.classList.add('hidden');
+                }
+
+                // حساب الصفحات
+                const totalPages = Math.max(1, Math.ceil(state.filteredData.length / config.rowsPerPage));
+                dom.totalPagesNum.innerText = totalPages;
+                dom.currentPageNum.innerText = state.currentPage;
+                dom.prevPage.disabled = state.currentPage === 1;
+                dom.nextPage.disabled = state.currentPage === totalPages;
+
+                dom.previewHead.innerHTML = '';
+                dom.previewBody.innerHTML = '';
+
+                if (!state.filteredData.length) {
+                    const emptyRow = document.createElement('tr');
+                    const emptyCell = document.createElement('td');
+                    emptyCell.colSpan = 100;
+                    emptyCell.className = 'text-center py-12 text-slate-400';
+                    emptyCell.textContent = 'لا توجد بيانات تطابق الفلاتر';
+                    emptyRow.appendChild(emptyCell);
+                    dom.previewBody.appendChild(emptyRow);
+                    return;
+                }
+
+                const visibleKeys = Object.keys(state.filteredData[0]).filter((k) => !config.alwaysDeleteColumns.includes(k));
+                const headerRow = document.createElement('tr');
+                visibleKeys.forEach((key) => {
+                    const th = document.createElement('th');
+                    th.textContent = key;
+                    headerRow.appendChild(th);
+                });
+                dom.previewHead.appendChild(headerRow);
+
+                const start = (state.currentPage - 1) * config.rowsPerPage;
+                const end = state.currentPage * config.rowsPerPage;
+                const pageData = state.filteredData.slice(start, end);
+
+                pageData.forEach((row) => {
+                    const tr = document.createElement('tr');
+                    visibleKeys.forEach((key) => {
+                        const td = document.createElement('td');
+                        td.textContent = String(row[key] ?? '');
+                        tr.appendChild(td);
+                    });
+                    dom.previewBody.appendChild(tr);
+                });
+            }
+
+            // التنقل بين الصفحات
+            function changePage(direction) {
+                const totalPages = Math.max(1, Math.ceil(state.filteredData.length / config.rowsPerPage));
+                const nextPage = state.currentPage + direction;
+                state.currentPage = Math.min(totalPages, Math.max(1, nextPage));
+                renderPreview();
+            }
+
+            // تنظيف اسم الملف لتجنب الرموز الممنوعة في نظام التشغيل
+            function sanitizeFilename(value) {
+                return (value || 'NA').toString().replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+            }
+
+            // معالجة النصوص قبل الإرسال للإكسل (لتجنب تحولها لمعادلات)
+            function escapeExcelValue(value) {
+                if (typeof value !== 'string') return value;
+                if (/^[=+\-@]/.test(value)) {
+                    return `'${value}`;
+                }
+                return value;
+            }
+
+            // جلب اسم المنطقة الذكية
+            function getSelectedSmartLabel() {
+                if (state.currentSmartFilter === 'all') return '';
+                const button = config.smartButtons.find((item) => item.key === state.currentSmartFilter);
+                return button ? button.label : state.currentSmartFilter;
+            }
+
+            // تحديث الملاحظة أسفل الفلاتر
+            function updateSmartNote() {
+                const selectedGovs = getCheckedValues('gov');
+                if (selectedGovs.length === 1 && selectedGovs[0] === 'FTK' && state.currentSmartFilter !== 'all') {
+                    dom.smartSelectionNote.innerText = `سيُضاف إلى اسم الملف: المنطقة الذكية "${getSelectedSmartLabel()}".`;
+                    dom.smartSelectionNote.classList.remove('hidden');
+                } else {
+                    dom.smartSelectionNote.innerText = '';
+                    dom.smartSelectionNote.classList.add('hidden');
+                }
+            }
+
+            // دالة إنشاء ملف الـ Excel وتنزيله
+            function exportExcel(data, fileName, status) {
+                const statusText = (status || '').toString().toLowerCase();
+                // نعتبر الملف يحتوي على Pending فقط إذا كان يحتوي على الكلمة ولم يكن يحتوي على Done
+                const isPendingOnly = statusText.includes('pending') && !statusText.includes('done');
+
+                const processed = data.map((row) => {
+                    const next = { ...row };
+                    
+                    // حذف الأعمدة غير المطلوبة
+                    config.alwaysDeleteColumns.forEach((column) => delete next[column]);
+                    if (isPendingOnly) config.pendingOnlyDeleteColumns.forEach((column) => delete next[column]);
+
+                    // تنظيف المسافات الزائدة
+                    Object.keys(next).forEach(key => {
+                        if (typeof next[key] === 'string') {
+                            next[key] = next[key].replace(/\s\s+/g, ' ').trim();
+                            next[key] = escapeExcelValue(next[key]);
+                        }
+                    });
+
+                    // تنسيق التاريخ
+                    if (next.CreatedOn) {
+                        const created = new Date(next.CreatedOn);
+                        if (!Number.isNaN(created.getTime())) {
+                            next.CreatedOn = escapeExcelValue(`${created.getFullYear()}/${created.getMonth() + 1}/${created.getDate()}`);
+                        }
+                    }
+                    return next;
+                });
+
+                const ws = XLSX.utils.json_to_sheet(processed);
+
+                // ضبط عرض الأعمدة تلقائياً
+                if (processed.length > 0) {
+                    const objectKeys = Object.keys(processed[0]);
+                    const colWidths = objectKeys.map(key => {
+                        const headerLen = key.toString().length;
+                        const maxDataLen = processed.reduce((max, row) => {
+                            const val = row[key] ? row[key].toString().length : 0;
+                            return Math.max(max, val);
+                        }, headerLen);
+                        
+                        return { wch: maxDataLen + 1 };
+                    });
+                    ws['!cols'] = colWidths;
+                }
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, config.defaultSheetName);
+                XLSX.writeFile(wb, `${fileName}.xlsx`);
+            }
+
+            // دالة التصدير كملف واحد متكامل (الميزة الجديدة)
+            function handleSingleExport() {
+                if (!state.filteredData.length) {
+                    alert('لا توجد بيانات للتصدير');
+                    return;
+                }
+
+                const originalBtnText = dom.exportSingleBtn.innerText;
+                dom.exportSingleBtn.innerText = 'جاري المعالجة...';
+                dom.exportSingleBtn.disabled = true;
+                dom.exportSingleBtn.classList.add('opacity-70', 'cursor-not-allowed');
+
+                setTimeout(() => {
+                    const dateStr = new Date().toISOString().split('T')[0];
+                    // اسم ملف بسيط للملف الموحد
+                    const filename = sanitizeFilename(`All_Filtered_Data_${dateStr}`);
+                    
+                    // نرسل Mixed كحالة لتجنب حذف الأعمدة ما لم يكن المستخدم قد اختار Pending فقط صراحة
+                    const selectedStats = getCheckedValues('status');
+                    const statusForExport = (selectedStats.length === 1 && selectedStats[0].toLowerCase() === 'pending') ? 'pending' : 'mixed';
+                    
+                    exportExcel(state.filteredData, filename, statusForExport);
+                    showStatus('تم تنزيل الملف الشامل بنجاح', 'bg-green-100 text-green-700');
+
+                    dom.exportSingleBtn.innerText = originalBtnText;
+                    dom.exportSingleBtn.disabled = false;
+                    dom.exportSingleBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                }, 100);
+            }
+
+            // معالجة الضغط على زر التصدير المنفصل المتعدد
+            function handleExport() {
+                if (!state.filteredData.length) {
+                    alert('لا توجد بيانات للتصدير');
+                    return;
+                }
+
+                // تغيير حالة الزر لمنع النقر المزدوج (UX Improvement)
+                const originalBtnText = dom.convertBtn.innerText;
+                dom.convertBtn.innerText = 'جاري التجهيز والتحميل...';
+                dom.convertBtn.disabled = true;
+                dom.convertBtn.classList.add('opacity-70', 'cursor-not-allowed');
+
+                // استخدام setTimeout لإعطاء المتصفح فرصة لتحديث شكل الزر قبل تجميد الشاشة بمعالجة البيانات
+                setTimeout(() => {
+                    const selectedGovs = getCheckedValues('gov');
+                    const selectedCons = getCheckedValues('contractor');
+                    const selectedStats = getCheckedValues('status');
+
+                    const govsToLoop = selectedGovs.length ? selectedGovs : ['AllGovs'];
+                    const consToLoop = selectedCons.length ? selectedCons : ['AllContractors'];
+                    
+                    // دمج الحالات في سلسلة نصية واحدة مع حماية طول اسم الملف
+                    let combinedStatusStr = 'AllStatus';
+                    if (selectedStats.length > 0) {
+                        // إذا كانت الحالات المختارة أكثر من 3، نضع رقم للتبسيط منعاً لأخطاء الويندوز
+                        combinedStatusStr = selectedStats.length > 3 ? `${selectedStats.length}-Statuses` : selectedStats.join('-');
+                    }
+
+                    let fileCount = 0;
+                    govsToLoop.forEach((gov) => {
+                        consToLoop.forEach((contractor) => {
+                            const subset = state.filteredData.filter((row) => {
+                                const zone = getZoneValue(row);
+                                const rowContractor = (row['Zone Contractor'] || '').toString();
+                                const rowStatus = (row.Status || '').toString();
+
+                                const matchGov = gov === 'AllGovs' || zone.startsWith(gov);
+                                const matchCon = contractor === 'AllContractors' || rowContractor === contractor;
+                                const matchStatus = selectedStats.length === 0 || selectedStats.includes(rowStatus);
+                                return matchGov && matchCon && matchStatus;
+                            });
+
+                            if (!subset.length) return; // تجاوز المزيج الذي لا يحتوي على بيانات
+
+                            const smartLabel = gov === 'FTK' && state.currentSmartFilter !== 'all' ? getSelectedSmartLabel() : '';
+                            const filenameParts = [
+                                config.govMap[gov] || gov,
+                                smartLabel,
+                                contractor,
+                                combinedStatusStr,
+                                new Date().toISOString().split('T')[0]
+                            ].filter(Boolean);
+
+                            const filename = filenameParts.map(sanitizeFilename).join('_');
+
+                            // تمرير الكلمة المدمجة (أو الأصلية للتحقق من Pending/Done بداخل exportExcel)
+                            exportExcel(subset, filename, selectedStats.join(' ')); 
+                            fileCount += 1;
+                        });
+                    });
+
+                    showStatus(`تم تنزيل ${fileCount} ملفات مقسمة بنجاح`, 'bg-blue-100 text-blue-700');
+                    
+                    // إعادة الزر لحالته الطبيعية
+                    dom.convertBtn.innerText = originalBtnText;
+                    dom.convertBtn.disabled = false;
+                    dom.convertBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+
+                }, 100);
+            }
+
+            // دالة لعرض رسائل الحالة
+            function showStatus(message, classes) {
+                dom.statusMsg.innerText = message;
+                dom.statusMsg.className = `p-4 text-center text-sm font-bold border-t ${classes}`;
+                dom.statusMsg.classList.remove('hidden');
+            }
+
+            // تهيئة الأحداث (Event Listeners)
+            function initEvents() {
+                dom.csvInput.addEventListener('change', (event) => {
+                    const file = event.target.files?.[0];
+                    if (file) parseCsv(file);
+                });
+                
+                // استخدام الـ Debounce هنا لمنع التهنيج عند البحث
+                dom.zoneNameInput.addEventListener('input', debounce(updateGlobalFilters, 300));
+                
+                // أزرار التصدير
+                dom.convertBtn.addEventListener('click', handleExport);
+                dom.exportSingleBtn.addEventListener('click', handleSingleExport);
+
+                // أزرار الصفحات
+                dom.prevPage.addEventListener('click', () => changePage(-1));
+                dom.nextPage.addEventListener('click', () => changePage(1));
+
+                // أحداث أزرار تحديد الكل
+                dom.btnSelectAllGov.addEventListener('click', () => toggleAllCheckboxes('govContainer', 'gov'));
+                dom.btnSelectAllCon.addEventListener('click', () => toggleAllCheckboxes('contractorContainer', 'contractor'));
+                dom.btnSelectAllStat.addEventListener('click', () => toggleAllCheckboxes('statusContainer', 'status'));
+            }
+
+            // بدء التشغيل
+            initSmartButtons();
+            initEvents();
+        })();
+    </script>
+</body>
+</html>
